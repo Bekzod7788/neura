@@ -1,0 +1,7 @@
+﻿node_modules/
+.next/
+python-backend/models/
+python-backend/venv/
+data/
+.env.local
+*.log

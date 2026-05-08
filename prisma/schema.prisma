@@ -1,0 +1,107 @@
+﻿generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  clerkId   String   @unique
+  email     String   @unique
+  fullName  String
+  role      String   @default("patient")
+  createdAt DateTime @default(now())
+
+  scans                Scan[]
+  diagnosisResults     DiagnosisResult[]
+  prescriptions        Prescription[]      @relation("PrescribedTo")
+  writtenPrescriptions Prescription[]      @relation("WrittenBy")
+  sentMessages         Message[]           @relation("Sender")
+  chatRooms            ChatRoomUser[]
+}
+
+model Scan {
+  id         String           @id @default(uuid())
+  userId     String
+  user       User             @relation(fields: [userId], references: [id])
+  fileName   String
+  fileUrl    String
+  fileType   String
+  scanType   String
+  uploadedAt DateTime         @default(now())
+  diagnosis  DiagnosisResult?
+}
+
+model DiagnosisResult {
+  id            String   @id @default(uuid())
+  scanId        String   @unique
+  scan          Scan     @relation(fields: [scanId], references: [id])
+  patientId     String
+  patient       User     @relation("DiagnosisReceiver", fields: [patientId], references: [id])
+  modelName     String
+  prediction    String
+  aiComment     String?
+  doctorComment String?
+  createdAt     DateTime @default(now())
+}
+
+model Prescription {
+  id              String               @id @default(uuid())
+  patientId       String
+  patient         User                 @relation("PrescribedTo", fields: [patientId], references: [id])
+  doctorId        String
+  doctor          User                 @relation("WrittenBy", fields: [doctorId], references: [id])
+  originalText    String
+  aiGeneratedText String
+  pdfUrl          String?
+  issuedAt        DateTime             @default(now())
+  validUntil      DateTime?
+  medicationSchedules MedicationSchedule[]
+}
+
+model MedicationSchedule {
+  id              String       @id @default(uuid())
+  prescriptionId  String
+  prescription    Prescription @relation(fields: [prescriptionId], references: [id])
+  userId          String
+  user            User         @relation(fields: [userId], references: [id])
+  drugName        String
+  dosage          String
+  timesPerDay     Int
+  startDate       DateTime
+  endDate         DateTime?
+  reminded        Boolean      @default(false)
+  lastRemindedAt  DateTime?
+}
+
+model ChatRoom {
+  id        String         @id @default(uuid())
+  patientId String
+  doctorId  String
+  patient   User           @relation("PatientRooms", fields: [patientId], references: [id])
+  doctor    User           @relation("DoctorRooms", fields: [doctorId], references: [id])
+  messages  Message[]
+  users     ChatRoomUser[]
+}
+
+model ChatRoomUser {
+  id     String   @id @default(uuid())
+  roomId String
+  userId String
+  room   ChatRoom @relation(fields: [roomId], references: [id])
+  user   User     @relation(fields: [userId], references: [id])
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  roomId    String
+  room      ChatRoom @relation(fields: [roomId], references: [id])
+  senderId  String
+  sender    User     @relation("Sender", fields: [senderId], references: [id])
+  content   String
+  encrypted Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
